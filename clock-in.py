@@ -22,9 +22,11 @@ class ClockIn(object):
         HEADERS: (dir) 请求头
         sess: (requests.Session) 统一的session
     """
-    LOGIN_URL = "https://zjuam.zju.edu.cn/cas/login?service=https%3A%2F%2Fhealthreport.zju.edu.cn%2Fa_zju%2Fapi%2Fsso%2Findex%3Fredirect%3Dhttps%253A%252F%252Fhealthreport.zju.edu.cn%252Fncov%252Fwap%252Fdefault%252Findex"
-    BASE_URL = "https://healthreport.zju.edu.cn/ncov/wap/default/index"
-    SAVE_URL = "https://healthreport.zju.edu.cn/ncov/wap/default/save"
+    #LOGIN_URL = "https://zjuam.zju.edu.cn/cas/login?service=https%3A%2F%2Fhealthreport.zju.edu.cn%2Fa_zju%2Fapi%2Fsso%2Findex%3Fredirect%3Dhttps%253A%252F%252Fhealthreport.zju.edu.cn%252Fncov%252Fwap%252Fdefault%252Findex"
+    LOGIN_URL = "https://jkdk.zju.edu.cn/uc/wap/login?redirect=https%3A%2F%2Fjkdk.zju.edu.cn%2Fncov%2Fwap%2Fdefault%2Findex"
+    CHECK_URL = "https://jkdk.zju.edu.cn/uc/wap/login/check"
+    BASE_URL = "https://jkdk.zju.edu.cn/ncov/wap/default/index"
+    SAVE_URL = "https://jkdk.zju.edu.cn/ncov/wap/default/save"
     CAPTCHA_URL = 'https://healthreport.zju.edu.cn/ncov/wap/default/code'
     HEADERS = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/75.0.3770.100 Safari/537.36"
@@ -38,24 +40,30 @@ class ClockIn(object):
 
     def login(self):
         """Login to ZJU platform"""
-        res = self.sess.get(self.LOGIN_URL, headers=self.HEADERS)
+        '''res = self.sess.get(self.LOGIN_URL, headers=self.HEADERS)
         execution = re.search(
             'name="execution" value="(.*?)"', res.text).group(1)
         res = self.sess.get(
             url='https://zjuam.zju.edu.cn/cas/v2/getPubKey', headers=self.HEADERS).json()
         n, e = res['modulus'], res['exponent']
-        encrypt_password = self._rsa_encrypt(self.password, e, n)
+        encrypt_password = self._rsa_encrypt(self.password, e, n)'''
 
-        data = {
+        '''data = {
             'username': self.username,
             'password': encrypt_password,
             'execution': execution,
             '_eventId': 'submit'
+        }'''
+        data = {
+            'username': self.username,
+            'password': self.password,
         }
-        res = self.sess.post(url=self.LOGIN_URL, data=data, headers=self.HEADERS)
+        res = self.sess.post(url=self.CHECK_URL, data=data, headers=self.HEADERS).json()
 
         # check if login successfully
-        if '统一身份认证' in res.content.decode():
+        '''if '统一身份认证' in res.content.decode():
+            raise LoginError('登录失败，请核实账号密码重新登录')'''
+        if res['e'] != 0:
             raise LoginError('登录失败，请核实账号密码重新登录')
         return self.sess
 
@@ -104,8 +112,8 @@ class ClockIn(object):
         new_info['number'] = number
         new_info["date"] = self.get_date()
         new_info["created"] = round(time.time())
-        new_info["address"] = "浙江省杭州市西湖区"
-        new_info["area"] = "浙江省 杭州市 西湖区"
+        new_info["address"] = "浙江省杭州市上城区"
+        new_info["area"] = "浙江省 杭州市 上城区"
         new_info["province"] = new_info["area"].split(' ')[0]
         new_info["city"] = new_info["area"].split(' ')[1]
         # form change
@@ -122,7 +130,7 @@ class ClockIn(object):
         # new_info['verifyCode'] = self.get_captcha() # 验证码识别（已取消）
         
         # 2022.07.05
-        new_info['internship'] = 3  # 今日是否进行实习或实践
+        #new_info['internship'] = 3  # 今日是否进行实习或实践
 
         # 2021.08.05 Fix 2
         magics = re.findall(r'"([0-9a-f]{32})":\s*"([^\"]+)"', html)
